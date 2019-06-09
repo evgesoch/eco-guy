@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.17.0/dist/phaser.min.js"></script>
+</head>
+<body>
+    
+<script>
+    /**
+    * Sprite resources:
+    * https://www.deviantart.com/academico95/art/Garbodor-pmd-sprites-559315557
+    * https://www.deviantart.com/powercristal/art/Trubbish-PMD-custom-sprites-310909638
+    * https://www.deviantart.com/digibody/art/Animated-sprite-sheet-32x32-188456006
+    * 
+    * Sound resources:
+    * https://freesound.org/people/grunz/sounds/109663/
+    * https://freesound.org/people/cabled_mess/sounds/371451/
+    * https://freesound.org/people/jobro/sounds/60443/
+    * https://freesound.org/people/Cabeeno%20Rossley/sounds/126418/
+    * https://freesound.org/people/juskiddink/sounds/140867/
+    */
+
+
+    /**
+    * Titles Class
+    */
+    class Titles extends Phaser.Scene 
+    {
+        constructor ()
+        {
+            super({ key: 'titles' });
+        }
+
+
+        preload ()
+        {
+            this.load.image('titles', '/title-screen.png');
+        }
+
+
+        create ()
+        {
+            this.titles = this.add.image(400, 300, 'titles');
+            this.input.manager.enabled = true;
+            this.input.once('pointerdown', function () {
+                this.scene.start('eco-guy');
+            }, this);
+        }
+    }
+
+
+    /**
+    * Game Class
+    */
+    class EcoGuy extends Phaser.Scene 
+    {
+        constructor ()
+        {
+            super({ key: 'eco-guy' });
+            this.score = 0;
+            this.score_text;
+            this.trash_collected = 0;
+            this.lives = 3;
+            this.lives_text;
+            this.ground;
+            // Create the platforms
+            this.platforms;
+            // Create the smaller platforms
+            this.platforms_quart;
+            // Create the Player
+            this.player;
+            // Create the keybord inputs
+            this.cursors;
+            // Create trash
+            this.trash;
+            // Player collects trash
+            this.collect_trash;
+            // Create Garbage Masters
+            this.garbage;
+            // Garbage Masters collide with the player, the platforms and the ground
+            this.hit_garbage;
+            // Audio objects
+            this.remove_garbage_audio;
+            this.victory_audio;
+            this.lose_audio;
+            this.level_completed_audio;
+            this.boing_audio;
+        }
+
+
+        /**
+        * Loads the resources of the game
+        */
+        preload ()
+        {
+            this.load.image('sky', '/sky.png');
+            this.load.image('platform', '/brick1_plat.jpg');
+            this.load.image('platform_quart', '/brick1_plat_quart.jpg');
+            this.load.image('ground', '/platform.png');
+            this.load.image('trash', '/trubbish_transparentt.png');
+            this.load.image('garbage', '/garbodor_transparentt.png');
+            this.load.spritesheet('boy', '/boy.png',
+                { frameWidth: 32, frameHeight: 33.5 }
+            );
+            this.load.audio('remove_garbage_audio', '/removeGarbage.wav');
+            this.load.audio('victory_audio', '/victory.wav');
+            this.load.audio('lose_audio', '/lose.wav');
+            this.load.audio('level_completed_audio', '/levelcompleted.wav');
+            this.load.audio('boing_audio', '/boing.wav');
+        }
+
+
+        /**
+        * Creates the game
+        */
+        create ()
+        {
+            // Set some parameters
+            this.score = 0;
+            this.score_text;
+            this.trash_collected = 0;
+            this.lives = 5;
+            this.lives_text;
+
+            // Create Audio
+            this.remove_garbage_audio = this.sound.add('remove_garbage_audio');
+            this.victory_audio = this.sound.add('victory_audio');
+            this.lose_audio = this.sound.add('lose_audio');
+            this.level_completed_audio = this.sound.add('level_completed_audio');  
+            this.boing_audio = this.sound.add('boing_audio');  
+            
+            // Render the sky
+            this.add.image(400, 300, 'sky');
+            // Create the ground
+            this.ground = this.physics.add.staticGroup();
+            // Create the platforms
+            this.platforms = this.physics.add.staticGroup();
+            // Create the smaller platforms
+            this.platforms_quart = this.physics.add.staticGroup();
+
+            // Render ground and platforms
+            this.ground.create(400, 590, 'ground').setScale(2).refreshBody();
+            this.platforms.create(600, 500, 'platform');
+            this.platforms.create(50, 450, 'platform');
+            this.platforms.create(-90, 330, 'platform');
+            this.platforms.create(-150, 180, 'platform');
+            this.platforms.create(840, 320, 'platform');
+            this.platforms.create(950, 200, 'platform');
+            this.platforms_quart.create(250, 250, 'platform_quart');
+            this.platforms_quart.create(460, 380, 'platform_quart');
+
+            // Create the Player
+            this.player = this.physics.add.sprite(100, 450, 'boy');
+
+            // Player bounces on ground
+            this.player.setBounce(0.2);
+
+            // Player collides with the world bounds
+            this.player.setCollideWorldBounds(true);
+
+            // The Player collides with the platforms and the ground
+            this.physics.add.collider(this.player, this.platforms);
+            this.physics.add.collider(this.player, this.platforms_quart);
+            this.physics.add.collider(this.player, this.ground);
+
+            // Sprite animation
+            this.anims.create({
+                key: 'left',
+                frames: this.anims.generateFrameNumbers('boy', { start: 5, end: 9 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'turn',
+                frames: [ { key: 'boy', frame: 0 } ],
+                frameRate: 20
+            });
+            this.anims.create({
+                key: 'right',
+                frames: this.anims.generateFrameNumbers('boy', { start: 15, end: 19 }),
+                frameRate: 10,
+                repeat: -1
+            });
+
+            // Assign spacebar key
+            //spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+            // Create the keybord inputs
+            this.cursors = this.input.keyboard.createCursorKeys();
+
+            // Create trash
+            this.trash = this.physics.add.group({
+                key: 'trash',
+                repeat: 19,
+                setXY: { x: 12, y: 0, stepX: 40 }
+            });
+
+            // Make trash bounce
+            this.trash.children.iterate(function (child) {
+                child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            });
+
+            // trash collide with the platforms and the ground
+            this.physics.add.collider(this.trash, this.platforms);
+            this.physics.add.collider(this.trash, this.platforms_quart);
+            this.physics.add.collider(this.trash, this.ground);
+
+            // Player collects trash
+            this.collect_trash = this.collectTrash;
+            this.physics.add.overlap(this.player, this.trash, this.collect_trash, null, this);
+
+            // Score
+            this.score_text = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+            // Lives
+            this.lives_text = this.add.text(630, 16, `Lives: ${this.lives}`, { fontSize: '32px', fill: '#000' });
+
+            // Create Garbage Masters
+            this.garbage = this.physics.add.group();
+
+            // Garbage Masters collide with the player, the platforms and the ground
+            this.hit_garbage = this.hitGarbage;
+            this.physics.add.collider(this.garbage, this.ground);
+            this.physics.add.collider(this.garbage, this.platforms);
+            this.physics.add.collider(this.garbage, this.platforms_quart);
+            this.physics.add.collider(this.player, this.garbage, this.hit_garbage, null, this);
+        }
+
+
+        /**
+        * Updates the game
+        */
+        update ()
+        {
+            if (this.cursors.left.isDown)
+            {
+                this.player.setVelocityX(-160);
+                this.player.anims.play('left', true);
+            }
+            else if (this.cursors.right.isDown)
+            {
+                this.player.setVelocityX(160);
+                this.player.anims.play('right', true);
+            }
+            else
+            {
+                this.player.setVelocityX(0);
+                this.player.anims.play('turn');
+            }
+
+            if (this.cursors.up.isDown /*Phaser.Input.Keyboard.JustDown(spacebar)*/ && this.player.body.touching.down)
+            {
+                this.player.setVelocityY(-400);
+            }
+
+            if (this.trash_collected === 80) 
+            {
+                this.victory_audio.play();
+                this.scene.pause();
+                alert("You won!\n" + `Score: ${this.score}`);
+                //gameOver = true;
+            }
+        }
+
+
+        /**
+        * Happens when the Player collects one trash item
+        */
+        collectTrash (player, trubbish)
+        {
+            trubbish.disableBody(true, true);
+            this.remove_garbage_audio.play();
+
+            this.score += 10;
+            this.trash_collected += 1;
+            this.score_text.setText('Score: ' + this.score);
+
+            if (this.trash.countActive(true) === 0)
+            {
+                
+
+                if (this.trash_collected != 80) {
+                    this.level_completed_audio.play();
+
+                    this.trash.children.iterate(function (child) {
+                        child.enableBody(true, child.x, 0, true, true);
+                    });
+                
+                    var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+                    var garbage1 = this.garbage.create(x, 16, 'garbage');
+                    garbage1.setBounce(1);
+                    garbage1.setCollideWorldBounds(true);
+                    garbage1.setVelocity(Phaser.Math.Between(-200, 200), 20);
+
+                    var garbage2 = this.garbage.create(x, 16, 'garbage');
+                    garbage2.setBounce(1);
+                    garbage2.setCollideWorldBounds(true);
+                    garbage2.setVelocity(Phaser.Math.Between(-200, 200), 20);
+                }
+                else if (this.trash_collected === 80) 
+                {
+                    
+                }
+            }
+        }
+
+
+        /**
+        * Happens when a Garbage Master hits the player 
+        */
+        hitGarbage (player, garbage)
+        {
+            this.boing_audio.play();
+
+            this.lives -= 1;
+            this.lives_text.setText('Lives: ' + this.lives);
+
+            if (this.lives === 0) 
+            {
+                this.lose_audio.play();
+                this.physics.pause();
+                this.player.setTint(0xff0000);
+                this.player.anims.play('turn');
+                this.scene.pause();
+                alert("Game Over\n" + `Score: ${this.score}`);
+                //gameOver = true;
+            }
+            else
+            {
+
+            }
+        }
+    }
+
+            // Game configuration
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 600 },
+                debug: false
+            }
+        },
+        scene: [Titles, EcoGuy]
+    };
+
+    // Create the game instance
+    var game = new Phaser.Game(config);
+</script>
+
+</body>
+</html>
